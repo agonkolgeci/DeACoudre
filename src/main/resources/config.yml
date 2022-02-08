@@ -1,0 +1,46 @@
+minPlayers: 2 #Minimum is 2 players
+maxPlayers: 14 #Maximum is 14 players
+
+timers: #Times in seconds
+  launch: 30
+  jump: 10
+  end: 15
+
+locations:
+  waitingRoom:
+    ==: org.bukkit.Location
+    world: deacoudre
+    x: -31.5
+    y: 103.5
+    z: 29.5
+    pitch: 0.0
+    yaw: 180.0
+  jump:
+    ==: org.bukkit.Location
+    world: deacoudre
+    x: 1.5
+    y: 102.5
+    z: 0
+    pitch: 15.0
+    yaw: 135.0
+  end:
+    ==: org.bukkit.Location
+    world: deacoudre
+    x: -25.5
+    y: 122.5
+    z: -76.5
+    pitch: 0.0
+    yaw: -20.0
+  pool:
+    '1':
+      ==: org.bukkit.Location
+      world: deacoudre
+      x: -8
+      y: 62
+      z: -12
+    '2':
+      ==: org.bukkit.Location
+      world: deacoudre
+      x: 4
+      y: 62
+      z: 0

@@ -1,0 +1,16 @@
+name: DeACoudre
+authors: [ Jielos ]
+description: A Game
+website: https://jielos.fr/
+
+version: '${project.version}'
+main: fr.jielos.deacoudre.Main
+depend:
+  - Netherboard
+
+commands:
+  forcestart:
+    description: Force the start of the game
+    usage: /<command>
+    permission: op
+    permission-message: "§cVous n'avez pas les permissions suffisantes."
