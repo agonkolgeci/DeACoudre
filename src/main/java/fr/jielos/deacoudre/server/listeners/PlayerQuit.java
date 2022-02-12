@@ -2,6 +2,7 @@ package fr.jielos.deacoudre.server.listeners;
 
 import fr.jielos.deacoudre.Main;
 import fr.jielos.deacoudre.game.Game;
+import fr.jielos.deacoudre.game.references.Config;
 import fr.jielos.deacoudre.game.references.Status;
 import fr.jielos.deacoudre.game.references.Message;
 import org.bukkit.entity.Player;
@@ -18,19 +19,28 @@ public class PlayerQuit implements Listener {
 
         event.setQuitMessage(null);
 
-        if(game.getData().getPlayers().contains(player)) {
-            game.getData().getPlayers().remove(player);
+        if(game.getGameData().getPlayers().contains(player)) {
+            game.getGameData().getPlayers().remove(player);
 
-            if(game.getStatus() == Status.WAIT || game.getStatus() == Status.LAUNCH) {
-                event.setQuitMessage(String.format(Message.PLAYER_QUIT.getAsString(), player.getName(), game.getData().getPlayers().size(), game.getConfig().getMaxPlayers()));
-            } else if(game.getStatus() == Status.PLAY) {
-                event.setQuitMessage(String.format(Message.PLAYER_LEAVE.getAsString(), player.getName()));
-                game.getGameController().eliminatePlayer(player);
+            if(game.getStatus() == Status.WAIT_FOR_PLAYERS || game.getStatus() == Status.STARTING) {
+                event.setQuitMessage(String.format(Message.PLAYER_QUIT.getValue(), player.getName(), game.getGameData().getPlayers().size(), game.getConfigController().getAsInteger(Config.MAX_PLAYERS)));
 
-                if(game.getData().getPlayerJump() == player) {
-                    game.getGameController().nextJump();
-                } else {
-                    game.getGameController().checkEnd();
+                if(game.getStatus() == Status.WAIT_FOR_PLAYERS) {
+                    game.checkLaunch();
+                } else if(game.getStatus() == Status.STARTING) {
+                    if(!game.canLaunch()) {
+                        if(game.isLaunching()) {
+                            game.getLaunchScheduler().stop();
+                        }
+                    }
+                }
+
+                game.getScoreboardController().updateBoards();
+            } else if(game.getStatus() == Status.IN_GAME) {
+                event.setQuitMessage(String.format(Message.PLAYER_LEAVE.getValue(), player.getName()));
+
+                if(game.getGameData().isGamePlayer(player)) {
+                    game.getGameData().getGamePlayer(player).eliminate();
                 }
             }
         }

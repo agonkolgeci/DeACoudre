@@ -2,6 +2,7 @@ package fr.jielos.deacoudre.server.listeners;
 
 import fr.jielos.deacoudre.Main;
 import fr.jielos.deacoudre.game.Game;
+import fr.jielos.deacoudre.game.data.GamePlayer;
 import fr.jielos.deacoudre.game.references.Status;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -20,12 +21,12 @@ public class EntityDamage implements Listener {
             event.setCancelled(true);
 
             final Player player = (Player) entity;
+            if(game.getStatus() == Status.IN_GAME) {
+                if(game.getGameData().isGamePlayer(player)) {
+                    final GamePlayer gamePlayer = game.getGameData().getGamePlayer(player);
 
-            if(game.getStatus() == Status.PLAY) {
-                if(game.getGameController().isPlay(player)) {
                     if(event.getCause() == EntityDamageEvent.DamageCause.FALL) {
-                        game.getGameController().losePlayer(player);
-                        game.getGameController().nextJump();
+                        gamePlayer.lose();
                     }
                 }
             }

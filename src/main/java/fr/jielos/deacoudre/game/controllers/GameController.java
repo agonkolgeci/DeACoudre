@@ -2,11 +2,17 @@ package fr.jielos.deacoudre.game.controllers;
 
 import fr.jielos.deacoudre.game.Game;
 import fr.jielos.deacoudre.game.GameComponent;
-import fr.jielos.deacoudre.game.data.Attribute;
+import fr.jielos.deacoudre.game.data.GamePlayer;
+import fr.jielos.deacoudre.game.references.Config;
 import fr.jielos.deacoudre.game.references.Message;
-import fr.jielos.deacoudre.game.schedulers.PlayerJump;
+import fr.jielos.deacoudre.game.schedulers.PlayerJumpScheduler;
+import org.bukkit.DyeColor;
 import org.bukkit.GameMode;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
 
 public class GameController extends GameComponent {
 
@@ -14,95 +20,77 @@ public class GameController extends GameComponent {
         super(game);
     }
 
-    public void nextJump() {
-        if(game.getData().getPlayers().size() > 1) {
-            game.getData().incrementIndexJump();
+    public void initPlayers() {
+        game.getInstance().getLogger().info("Initialization of the players connected to the server in the new game.");
 
-            final Player playerJump = game.getData().getPlayers().get(game.getData().getIndexJump());
-            game.getData().setPlayerJump(playerJump);
+        for(final Player player : game.getInstance().getServer().getOnlinePlayers()) {
+            addPlayer(player);
 
-            playerJump.setGameMode(GameMode.ADVENTURE);
-            playerJump.teleport(game.getConfig().getJump());
+            player.teleport(game.getConfigController().getAsLocation(Config.WAITING_ROOM));
 
-            final PlayerJump jump = new PlayerJump(game, playerJump);
-            game.getData().getJumps().put(playerJump, jump);
-            jump.runTaskTimer(game.getInstance(), 0, 20);
-
-            game.getScoreboardController().updateBoards();
-
-            game.getInstance().getServer().broadcastMessage(String.format(Message.PLAYER_GO_JUMP.getAsString(), playerJump.getName()));
-        } else {
-            checkEnd();
+            game.getTeamsController().updateTeam(player);
         }
     }
 
-    public void losePlayer(final Player player) {
-        if(game.getData().getAttributes().containsKey(player)) {
-            final Attribute attribute = game.getData().getAttributes().get(player);
-            if(attribute.getHealths() <= 0) {
-                eliminatePlayer(player);
-            } else {
-                attribute.decreaseHealth();
-                game.getInstance().getServer().broadcastMessage(String.format(Message.PLAYER_LOSE_HEALTH.getAsString(), player.getName(), attribute.getHealths()));
+    public void initPool() {
+        game.getInstance().getLogger().info("Initialization of the water pool: filling it with water.");
 
-                player.setGameMode(GameMode.SPECTATOR);
-                player.teleport(game.getConfig().getJump());
-            }
-
-            removeJump(player);
-
-            game.getData().getAttributes().replace(player, attribute);
+        for(final Block block : game.getConfigController().getAsArea(Config.POOL).getBlocks()) {
+            block.setType(Material.WATER);
         }
     }
 
-    public void eliminatePlayer(final Player player) {
-        game.getData().getPlayers().remove(player);
-
-        putSpectator(player);
-
-        game.getInstance().getServer().broadcastMessage(String.format(Message.PLAYER_ELIMINATE.getAsString(), player.getName()));
-    }
-
-    public void removeJump(final Player player) {
-        if(game.getData().getJumps().containsKey(player)) {
-            game.getData().getJumps().get(player).cancel();
-            game.getData().getJumps().remove(player);
+    public void initWorlds() {
+        for(final World world : game.getInstance().getServer().getWorlds()) {
+            world.setGameRuleValue("doDaylightCycle", String.valueOf(false));
+            world.setTime(6000);
         }
     }
 
-    public void putSpectator(final Player player) {
-        game.getData().getPlayers().remove(player);
+    public void addPlayer(final Player player) {
+        if(!game.getGameData().getPlayers().contains(player)) {
+            game.getGameData().getPlayers().add(player);
+        }
 
-        if(!game.getData().getSpectators().contains(player)) {
-            game.getData().getSpectators().add(player);
+        player.setGameMode(GameMode.ADVENTURE);
+
+        clearContents(player);
+
+        game.getTeamsController().updateTeam(player);
+        game.getScoreboardController().updateBoard(player);
+    }
+
+    public void addSpectator(final Player player) {
+        game.getGameData().getPlayers().remove(player);
+
+        if(!game.getGameData().getSpectators().contains(player)) {
+            game.getGameData().getSpectators().add(player);
         }
 
         player.setGameMode(GameMode.SPECTATOR);
+
+        clearContents(player);
+
+        game.getTeamsController().updateTeam(player);
+        game.getScoreboardController().updateBoard(player);
     }
 
-    public boolean canLaunch() {
-        return game.getData().getPlayers().size() >= game.getConfig().getMinPlayers();
-    }
-
-    public void checkLaunch() {
-        if(canLaunch()) {
-            game.launch();
+    public GamePlayer addGamePlayer(final Player player, final DyeColor dyeColor) {
+        if(!game.getGameData().isGamePlayer(player)) {
+            return new GamePlayer(game, player, dyeColor);
         }
-    }
 
-    public void checkEnd() {
-        if(game.getData().getPlayers().size() == 1) {
-            game.end(game.getData().getPlayers().get(0));
-        }
-    }
-
-    public boolean isPlay(final Player player) {
-        return game.getData().getPlayers().contains(player) && game.getData().getAttributes().containsKey(player);
+        return game.getGameData().getGamePlayer(player);
     }
 
     public void clearContents(final Player player) {
         player.getInventory().clear();
         player.getInventory().setArmorContents(null);
         player.setLevel(0); player.setExp(0);
+        player.setHealth(20L); player.setFoodLevel(20);
+
+        for(final PotionEffect potionEffect : player.getActivePotionEffects()) {
+            player.removePotionEffect(potionEffect.getType());
+        }
     }
 }

@@ -13,16 +13,16 @@ public class CommandForcestart implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         final Game game = Main.getGame();
-        if(game.getStatus() == Status.WAIT || game.getStatus() == Status.LAUNCH) {
-            if(game.getData().getPlayers().size() >= 2) {
-                sender.sendMessage(Message.START_FORCED.getAsString());
+        if(game.getStatus() == Status.WAIT_FOR_PLAYERS || game.getStatus() == Status.STARTING) {
+            if(game.getGameData().getPlayers().size() >= 2) {
+                sender.sendMessage(Message.START_FORCED.getValue());
                 game.start();
 
                 return true;
             }
         }
 
-        sender.sendMessage(Message.START_CANNOT_BE_FORCED.getAsString());
+        sender.sendMessage(Message.START_CANNOT_BE_FORCED.getValue());
         return true;
     }
 }

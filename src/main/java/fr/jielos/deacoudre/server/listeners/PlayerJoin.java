@@ -2,6 +2,7 @@ package fr.jielos.deacoudre.server.listeners;
 
 import fr.jielos.deacoudre.Main;
 import fr.jielos.deacoudre.game.Game;
+import fr.jielos.deacoudre.game.references.Config;
 import fr.jielos.deacoudre.game.references.Status;
 import fr.jielos.deacoudre.game.references.Message;
 import org.bukkit.GameMode;
@@ -21,25 +22,25 @@ public class PlayerJoin implements Listener {
 
         game.getGameController().clearContents(player);
 
-        if(!game.getData().getPlayers().contains(player)) {
-            game.getData().getPlayers().add(player);
+        if(!game.getGameData().getPlayers().contains(player)) {
+            game.getGameController().addPlayer(player);
 
-            if(game.getStatus() == Status.WAIT || game.getStatus() == Status.LAUNCH) {
+            if(game.getStatus() == Status.WAIT_FOR_PLAYERS || game.getStatus() == Status.STARTING) {
                 player.setGameMode(GameMode.ADVENTURE);
-                player.teleport(game.getConfig().getWaitingRoom());
 
-                event.setJoinMessage(String.format(Message.PLAYER_JOIN.getAsString(), player.getName(), game.getData().getPlayers().size(), game.getConfig().getMaxPlayers()));
+                event.setJoinMessage(String.format(Message.PLAYER_JOIN.getValue(), player.getName(), game.getGameData().getPlayers().size(), game.getConfigController().getAsInteger(Config.MAX_PLAYERS)));
 
                 game.getScoreboardController().updateBoards();
 
-                if(game.getStatus() == Status.WAIT) {
-                    game.getGameController().checkLaunch();
+                if(game.getStatus() == Status.WAIT_FOR_PLAYERS) {
+                    game.checkLaunch();
                 }
-            } else if(game.getStatus() == Status.PLAY) {
-                game.getGameController().putSpectator(player);
-                player.teleport(game.getConfig().getJump());
+            } else {
+                game.getGameController().addSpectator(player);
             }
         }
+
+        player.teleport(game.getConfigController().getAsLocation(Config.WAITING_ROOM));
     }
 
 }

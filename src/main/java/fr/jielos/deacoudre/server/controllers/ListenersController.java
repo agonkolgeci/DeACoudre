@@ -20,5 +20,7 @@ public class ListenersController extends ServerController {
 
         pluginManager.registerEvents(new PlayerMove(), instance);
         pluginManager.registerEvents(new EntityDamage(), instance);
+
+        pluginManager.registerEvents(new WeatherChange(), instance);
     }
 }

@@ -1,23 +1,18 @@
 package fr.jielos.deacoudre.game;
 
-import fr.jielos.deacoudre.game.controllers.GameController;
-import fr.jielos.deacoudre.game.controllers.ScoreboardController;
-import fr.jielos.deacoudre.game.data.Attribute;
-import fr.jielos.deacoudre.game.data.Config;
-import fr.jielos.deacoudre.game.data.Data;
+import fr.jielos.deacoudre.game.controllers.*;
+import fr.jielos.deacoudre.game.data.GamePlayer;
+import fr.jielos.deacoudre.game.data.GameData;
+import fr.jielos.deacoudre.game.references.Config;
 import fr.jielos.deacoudre.game.references.Message;
 import fr.jielos.deacoudre.game.references.Status;
-import fr.jielos.deacoudre.game.schedulers.GameEnd;
-import fr.jielos.deacoudre.game.schedulers.GameLaunch;
-import org.bukkit.ChatColor;
+import fr.jielos.deacoudre.game.schedulers.EndScheduler;
+import fr.jielos.deacoudre.game.schedulers.LaunchScheduler;
 import org.bukkit.DyeColor;
 import org.bukkit.GameMode;
-import org.bukkit.Material;
-import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scoreboard.Scoreboard;
-import org.bukkit.scoreboard.Team;
 
 import java.util.*;
 
@@ -27,193 +22,133 @@ public class Game {
 
     final GameController gameController;
     final ScoreboardController scoreboardController;
+    final ConfigController configController;
+    final TeamsController teamsController;
+    final JumpsController jumpsController;
 
-    final Data data;
-    final Config config;
+    final GameData gameData;
 
     Status status;
+
+    LaunchScheduler launchScheduler;
 
     public Game(final JavaPlugin instance) {
         this.instance = instance;
 
         this.gameController = new GameController(this);
         this.scoreboardController = new ScoreboardController(this);
+        this.configController = new ConfigController(this);
+        this.teamsController = new TeamsController(this);
+        this.jumpsController = new JumpsController(this);
 
-        this.data = new Data(this);
-        this.config = new Config(this);
-
-        this.status = Status.WAIT;
+        this.gameData = new GameData(this);
     }
 
     public void init() {
-        for(final Player player : instance.getServer().getOnlinePlayers()) {
-            if(!data.getPlayers().contains(player)) {
-                data.getPlayers().add(player);
-            }
+        setStatus(Status.WAIT_FOR_PLAYERS);
 
-            player.teleport(config.getWaitingRoom());
-            player.setGameMode(GameMode.ADVENTURE);
+        teamsController.initTeams();
 
-            gameController.clearContents(player);
-        }
+        gameController.initPlayers();
+        gameController.initPool();
+        gameController.initWorlds();
 
-        for(final Block block : config.getPool().getBlocks()) {
-            block.setType(Material.WATER);
-        }
-
-        final Scoreboard scoreboard = instance.getServer().getScoreboardManager().getMainScoreboard();
-        for(final Team team : scoreboard.getTeams()) {
-            team.unregister();
-        }
-
-        for(final DyeColor dyeColor : getDyeColors()) {
-            Team team = scoreboard.getTeam(dyeColor.name());
-            if(team == null) {
-                team = scoreboard.registerNewTeam(dyeColor.name());
-                team.setPrefix(translateDyeColor(dyeColor).toString());
-            }
-        }
-
-        gameController.checkLaunch();
         scoreboardController.updateBoards();
+
+        checkLaunch();
     }
 
     public void launch() {
-        this.status = Status.LAUNCH;
+        setStatus(Status.STARTING);
 
-        for(final Player player : data.getPlayers()) {
-            scoreboardController.updateBoard(player);
-        }
+        scoreboardController.updateBoards();
 
-        new GameLaunch(this).runTaskTimer(instance, 0, 20);
+        this.launchScheduler = new LaunchScheduler(this);
+        this.launchScheduler.runTaskTimer(instance, 0, 20);
     }
 
     public void start() {
-        this.status = Status.PLAY;
-        instance.getServer().broadcastMessage(Message.STARTING.getAsString());
+        setStatus(Status.IN_GAME);
 
-        final List<DyeColor> dyeColors = getDyeColors();
-        for(final Player player : data.getPlayers()) {
+        if(launchScheduler != null) {
+            launchScheduler.delete();
+        }
+
+        instance.getServer().broadcastMessage(Message.STARTING.getValue());
+
+        final List<DyeColor> dyeColors = teamsController.getDyeColors();
+        for(final Player player : gameData.getPlayers()) {
             player.setGameMode(GameMode.SPECTATOR);
-            player.teleport(config.getJump());
+            player.teleport(configController.getAsLocation(Config.JUMP));
             gameController.clearContents(player);
 
             final DyeColor dyeColor = dyeColors.get(new Random().nextInt(dyeColors.size()));
+            final GamePlayer gamePlayer = gameController.addGamePlayer(player, dyeColor);
 
-            final Attribute attribute = new Attribute(player, dyeColor);
-            data.getAttributes().put(player, attribute);
-            dyeColors.remove(dyeColor);
+            teamsController.updateTeam(player);
 
-            final Scoreboard scoreboard = instance.getServer().getScoreboardManager().getMainScoreboard();
-            final Team team = scoreboard.getTeam(dyeColor.name());
-            if(team != null) {
-                team.addEntry(player.getName());
-            }
-
-            player.setScoreboard(scoreboard);
-
-            player.getInventory().setHelmet(attribute.getWool().toItemStack());
+            player.getInventory().setHelmet(gamePlayer.getWool().toItemStack());
             player.updateInventory();
+
+            dyeColors.remove(dyeColor);
         }
 
-        gameController.nextJump();
+        jumpsController.nextJump();
         scoreboardController.updateBoards();
     }
 
-    public void end(final Player winner) {
-        this.status = Status.END;
-
+    public void end(final Player gameWinner) {
         instance.getServer().getScheduler().cancelAllTasks();
 
-        final Attribute attribute = data.getAttributes().get(winner);
-        instance.getServer().broadcastMessage(String.format(Message.PLAYER_WIN_GAME.getAsString(), winner.getName(), attribute.getHealths(), attribute.getJumps()));
+        setStatus(Status.END);
+
+        gameData.setGameWinner(gameWinner);
+        if(gameData.isGamePlayer(gameWinner)) {
+            final GamePlayer gamePlayer = gameData.getGamePlayer(gameWinner);
+
+            instance.getServer().broadcastMessage(String.format(Message.PLAYER_WIN_GAME.getValue(), gameWinner.getName(), gamePlayer.getHealths(), gamePlayer.getSuccessJumps()));
+        }
 
         for(final Player player : instance.getServer().getOnlinePlayers()) {
-            player.teleport(config.getEnd());
-            player.setGameMode(GameMode.ADVENTURE);
-            player.setLevel(0); player.setExp(0);
+            player.teleport(configController.getAsLocation(Config.END));
+            player.setGameMode(gameData.getPlayers().contains(player) ? GameMode.ADVENTURE : GameMode.SPECTATOR);
 
-            final Map<String, String> remplacements = new HashMap<>();
-            remplacements.put("\\{winner_name}", winner.getName());
-
-            scoreboardController.updateBoard(player, remplacements);
+            gameController.clearContents(player);
+            scoreboardController.updateBoard(player);
         }
 
-        new GameEnd(this).runTaskLater(instance, config.getTimerEnd()*20);
+        new EndScheduler(this).runTaskLater(instance, configController.getAsInteger(Config.TIMER_END) * 20L);
     }
 
-    public List<DyeColor> getDyeColors() {
-        final List<DyeColor> dyeColors = new ArrayList<>(Arrays.asList(DyeColor.values()));
-        dyeColors.remove(DyeColor.BROWN);
-        dyeColors.remove(DyeColor.MAGENTA);
-
-        return dyeColors;
+    public boolean isFull() {
+        return gameData.getPlayers().size() >= configController.getAsInteger(Config.MAX_PLAYERS);
     }
 
-    public ChatColor translateDyeColor(final DyeColor dyeColor) {
-        switch (dyeColor) {
-            case RED: {
-                return ChatColor.RED;
-            }
+    public boolean canLaunch() {
+        return gameData.getPlayers().size() >= configController.getAsInteger(Config.MIN_PLAYERS);
+    }
 
-            case BLUE: {
-                return ChatColor.DARK_BLUE;
-            }
+    public boolean isLaunching() {
+        return status == Status.STARTING && launchScheduler != null;
+    }
 
-            case CYAN: {
-                return ChatColor.DARK_AQUA;
-            }
-
-            case GRAY: {
-                return ChatColor.DARK_GRAY;
-            }
-
-            case LIME: {
-                return ChatColor.GREEN;
-            }
-
-            case PINK: {
-                return ChatColor.LIGHT_PURPLE;
-            }
-
-            case BLACK: {
-                return ChatColor.BLACK;
-            }
-
-            case GREEN: {
-                return ChatColor.DARK_GREEN;
-            }
-
-            case WHITE: {
-                return ChatColor.WHITE;
-            }
-
-            case ORANGE: {
-                return ChatColor.GOLD;
-            }
-
-            case PURPLE: {
-                return ChatColor.DARK_PURPLE;
-            }
-
-            case SILVER: {
-                return ChatColor.GRAY;
-            }
-
-            case YELLOW: {
-                return ChatColor.YELLOW;
-            }
-
-            case LIGHT_BLUE: {
-                return ChatColor.AQUA;
-            }
+    public void checkLaunch() {
+        if(canLaunch() && !isLaunching()) {
+            launch();
         }
+    }
 
-        return null;
+    public void checkEnd() {
+        if(gameData.getPlayers().size() == 1) {
+            end(gameData.getPlayers().get(0));
+        }
     }
 
     public JavaPlugin getInstance() {
         return instance;
+    }
+    public Scoreboard getScoreboard() {
+        return instance.getServer().getScoreboardManager().getMainScoreboard();
     }
 
     public GameController getGameController() {
@@ -222,12 +157,18 @@ public class Game {
     public ScoreboardController getScoreboardController() {
         return scoreboardController;
     }
-
-    public Data getData() {
-        return data;
+    public ConfigController getConfigController() {
+        return configController;
     }
-    public Config getConfig() {
-        return config;
+    public TeamsController getTeamsController() {
+        return teamsController;
+    }
+    public JumpsController getJumpsController() {
+        return jumpsController;
+    }
+
+    public GameData getGameData() {
+        return gameData;
     }
 
     public Status getStatus() {
@@ -235,5 +176,12 @@ public class Game {
     }
     public void setStatus(Status status) {
         this.status = status;
+    }
+
+    public void setLaunchScheduler(LaunchScheduler launchScheduler) {
+        this.launchScheduler = launchScheduler;
+    }
+    public LaunchScheduler getLaunchScheduler() {
+        return launchScheduler;
     }
 }

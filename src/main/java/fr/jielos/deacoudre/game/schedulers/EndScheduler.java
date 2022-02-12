@@ -3,9 +3,9 @@ package fr.jielos.deacoudre.game.schedulers;
 import fr.jielos.deacoudre.game.Game;
 import fr.jielos.deacoudre.game.GameScheduler;
 
-public class GameEnd extends GameScheduler {
+public class EndScheduler extends GameScheduler {
 
-    public GameEnd(Game game) {
+    public EndScheduler(Game game) {
         super(game);
     }
 
