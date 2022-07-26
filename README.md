@@ -11,4 +11,4 @@ Ce projet vous est mis a disposition dans une volonté de partage il est ainsi e
 Dé à coudre est un mini-jeu consistant au fur et à mesure de la game à remplir une piscine avec un bloc en sautant en hauteur. Vous pouvez gagner des vies bonus grâce à un Dé à coudre en faisant un saut en plein centre entre 4 blocs. Le dernier survivant gagne la partie.
 
 ## Crédits
-- Utilisation de l'API [Netherboard](https://github.com/MinusKube/Netherboard/)
+- Utilisation de l'API [Netherboard](https://github.com/MinusKube/Netherboard/) par [MinusKube](https://github.com/MinusKube)
