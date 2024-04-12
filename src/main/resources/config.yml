@@ -4,23 +4,23 @@
 
 # Le minimum de joueurs pour que la partie se lance automatiquement.
 # À noter qu'il est impossible de forcer le démarrage de la partie si le nombre de joueurs est inférieur à 2.
-min-players: 6
+min-players: 2
 
 # Le nombre maximum de personne pouvant rejoindre la partie.
 # Le maximum étant 14 par partie.
 max-players: 14
 
 # Nom de la carte (Map)
-map-name: "Exemple"
+map-name: "Bomber (SamaGames)"
 
 # Limite du nombre de vies.
 # Le joueur ne pourra donc avoir plus de vies que le nombre déterminé.
-healths-limited: true
-healths-limit: 3
+healths-limited: false
+healths-limit: 1
 
 # Les temps sont exprimés en secondes.
 # Temps avant le démarrage automatique de la partie.
-timer-launch: 30
+timer-launch: 5
 
 # Temps auquel le joueur doit sauter avant d'être éliminé ou perdre une vie.
 timer-jump: 10
@@ -29,48 +29,42 @@ timer-jump: 10
 timer-end: 15
 
 scoreboard:
-  # Nom d'affichage du scoreboard
   title: "§8- §d§lDé à coudre §8-"
-
   footer:
-    # Désactiver le footer du scoreboard
     enabled: true
-
-    # Contenu du footer si celui-ci est activé
-    content: "§eplay.jielos.fr"
+    content: "§enexus.agonkolgeci.com"
 
 # Tous les emplacements nécessaires au fonctionnement de la partie.
-# [À configurer]
 locations:
   # Emplacement de la salle d'attente :
   waiting-room:
     ==: org.bukkit.Location
-    world: deacoudre
-    x: 0.5
-    y: 50
-    z: 0.5
+    world: deacoudre_world
+    x: -31.5
+    y: 103.5
+    z: 29.5
     pitch: 0.0
-    yaw: 0.0
+    yaw: 180.0
 
   # Emplacement où le joueur saute dans la piscine :
   jump:
     ==: org.bukkit.Location
-    world: deacoudre
-    x: 0.5
-    y: 50
-    z: 0.5
-    pitch: 0.0
-    yaw: 0.0
+    world: deacoudre_world
+    x: 1.5
+    y: 105.5
+    z: -2.5
+    pitch: 15.0
+    yaw: 135.0
 
   # Emplacement où les joueurs seront téléportés à la fin de la partie.
   end:
     ==: org.bukkit.Location
-    world: deacoudre
-    x: 0.5
-    y: 50
-    z: 0.5
+    world: deacoudre_world
+    x: -25.5
+    y: 122.5
+    z: -76.5
     pitch: 0.0
-    yaw: 0.0
+    yaw: -20.0
 
   # Zone de la piscine.
   # Attention lorsque celle-ci est défini, l'eau sera automatiquement placée à cette zone,
@@ -78,13 +72,13 @@ locations:
   pool:
     '1':
       ==: org.bukkit.Location
-      world: deacoudre
-      x: 0
-      y: 0
-      z: 0
+      world: deacoudre_world
+      x: -10
+      y: 62
+      z: -14
     '2':
       ==: org.bukkit.Location
-      world: deacoudre
-      x: 0
-      y: 0
-      z: 0
+      world: deacoudre_world
+      x: 6
+      y: 62
+      z: 2

@@ -13,6 +13,7 @@ public class ConfigController extends GameComponent {
     public ConfigController(Game game) {
         super(game);
 
+        game.getInstance().saveDefaultConfig();
         this.fileConfiguration = game.getInstance().getConfig();
     }
 

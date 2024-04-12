@@ -5,8 +5,6 @@ website: https://jielos.fr/
 
 version: '${project.version}'
 main: fr.jielos.deacoudre.Main
-depend:
-  - Netherboard
 
 commands:
   forcestart:
